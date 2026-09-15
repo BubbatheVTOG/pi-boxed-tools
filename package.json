@@ -1,0 +1,31 @@
+{
+  "name": "pi-boxed-tools",
+  "version": "0.1.0",
+  "description": "User-box-inspired boxed rendering for pi's built-in text tools.",
+  "keywords": ["pi-package", "pi-coding-agent", "terminal-ui"],
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "src",
+    "tests",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/BubbatheVTOG/pi-boxed-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BubbatheVTOG/pi-boxed-tools/issues"
+  },
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  }
+}
