@@ -2,14 +2,22 @@
 // Loads the real module through pi's own jiti pipeline; verifies registration,
 // prompt-metadata copying, every render state, and real execute delegation
 // against a temp workspace (no LLM, no network).
-import { createJiti } from "file:///home/bubba/.npm-global/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti-static.mjs";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// Installed pi package root: PI_PACKAGE_DIR, else resolved from the global npm root.
 const PKG =
-  "/home/bubba/.npm-global/lib/node_modules/@earendil-works/pi-coding-agent";
+  process.env.PI_PACKAGE_DIR ??
+  path.join(
+    execFileSync("npm", ["root", "-g"], { encoding: "utf8" }).trim(),
+    "@earendil-works/pi-coding-agent",
+  );
+const { createJiti } = await import(
+  pathToFileURL(path.join(PKG, "node_modules/jiti/lib/jiti-static.mjs")).href
+);
 const alias = {
   "@earendil-works/pi-coding-agent": path.join(PKG, "dist/index.js"),
   "@earendil-works/pi-tui": path.join(
@@ -95,10 +103,11 @@ const multilineCall = bash
   .renderCall({ command: "if true; then\n  echo ready\nfi" }, theme)
   .render(WIDTH);
 check(
-  "bash renderCall → multiline shell command",
-  multilineCall.length === 3 &&
-    multilineCall[1].includes("echo ready") &&
-    multilineCall[2].includes("fi"),
+  "bash renderCall → multiline shell command collapses to one row",
+  multilineCall.length === 1 &&
+    multilineCall[0].includes("if true; then") &&
+    multilineCall[0].includes("+2 lines") &&
+    !multilineCall[0].includes("echo ready"),
   JSON.stringify(multilineCall),
 );
 
@@ -167,6 +176,45 @@ const empty = bash
 check(
   "bash empty → (no output) inside frame",
   empty.some((l) => l.includes("(no output)")),
+);
+
+// bash renderCall: multi-line commands collapse to one header row
+const multi = "python3 - <<PY\r\nimport x\nprint(1)\nPY";
+const multiHdr = bash.renderCall({ command: multi }, theme).render(120);
+check(
+  "bash multi-line renderCall → exactly one row, first line + count + hint",
+  multiHdr.length === 1 &&
+    multiHdr[0].includes("python3 - <<PY") &&
+    multiHdr[0].includes("+3 lines") &&
+    !multiHdr[0].includes("import x"),
+  JSON.stringify(multiHdr),
+);
+check(
+  "bash renderCall → no CR/LF inside any row (CRLF input normalized)",
+  !multiHdr.some((l) => /[\r\n]/.test(l)),
+);
+const multiRes = { content: [{ type: "text", text: "out1\nout2" }] };
+const multiCol = bash
+  .renderResult(multiRes, { expanded: false }, theme, { args: { command: multi } })
+  .render(100);
+const multiExp = bash
+  .renderResult(multiRes, { expanded: true }, theme, { args: { command: multi } })
+  .render(100);
+check(
+  "bash collapsed result → command not shown",
+  !multiCol.some((l) => l.includes("import x")),
+);
+check(
+  "bash expanded result → full command inside box above output",
+  multiExp.some((l) => l.includes("import x")) &&
+    multiExp.some((l) => l.includes("out2")) &&
+    multiExp.findIndex((l) => l.includes("import x")) <
+      multiExp.findIndex((l) => l.includes("out2")),
+  JSON.stringify(multiExp),
+);
+check(
+  "bash single-line renderCall → unchanged, no count suffix",
+  bash.renderCall({ command: "ls -la" }, theme).render(80)[0] === " bash ls -la",
 );
 
 // ── real execute delegation against a temp workspace ──

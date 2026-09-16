@@ -24,7 +24,7 @@ import {
   type ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
 import { Boxed, type BoxTheme, type BoxStyle } from "./box.ts";
-import { truncateToWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 const PREVIEW_LINES = 8;
 const HEADER_MAX = 120;
@@ -88,22 +88,30 @@ function header(theme: ThemeLike, name: string, detail: string): string {
   return ` ${title}${rest}`;
 }
 
+// pi-tui requires one string per row with no line terminators; CRLF input
+// would otherwise leave a stray \r in the row and corrupt redraws.
+function commandLines(command: string): string[] {
+  return highlightCode(command.replace(/\r\n?/g, "\n"), "bash");
+}
+
+// The call header is always one row: first command line plus a line count.
+// The full command is shown inside the result box when expanded, so long
+// heredocs never flood the transcript outside the frame.
 function bashCallLines(
   theme: ThemeLike,
   command: string,
   width: number,
 ): string[] {
   const title = theme.fg("toolTitle", "bash ");
-  const highlighted = highlightCode(command, "bash");
-
-  return highlighted.map((line: string, index: number) => {
-    const prefix = index === 0 ? ` ${title}` : "   ";
-    return `${prefix}${truncateToWidth(
-      line,
-      Math.max(0, width - prefix.length),
-      "…",
-    )}`;
-  });
+  const lines = commandLines(command);
+  const extra = lines.length - 1;
+  const suffix =
+    extra > 0
+      ? theme.fg("dim", ` (+${extra} lines · ${expandHint()})`)
+      : "";
+  const prefix = ` ${title}`;
+  const budget = Math.max(0, width - visibleWidth(prefix) - visibleWidth(suffix));
+  return [`${prefix}${truncateToWidth(lines[0] ?? "", budget, "…")}${suffix}`];
 }
 
 function resultLines(result: unknown): string[] {
@@ -164,7 +172,15 @@ function boxedResult(
     const colored = context?.isError
       ? raw.map((l) => theme.fg("error", l))
       : raw;
-    if (expanded || colored.length <= PREVIEW_LINES) {
+    if (expanded) {
+      const command = String(context?.args?.command ?? "");
+      const commandBlock =
+        isBash && command.includes("\n")
+          ? [...commandLines(command), theme.fg("dim", "─".repeat(24))]
+          : [];
+      return { lines: [...commandBlock, ...colored], style: displayStyle };
+    }
+    if (colored.length <= PREVIEW_LINES) {
       return { lines: colored, style: displayStyle };
     }
     const hidden = colored.length - PREVIEW_LINES;
