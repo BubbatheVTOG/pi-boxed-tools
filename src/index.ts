@@ -18,6 +18,7 @@ import {
   createGrepTool,
   createLsTool,
   createReadTool,
+  highlightCode,
   keyHint,
   type ExtensionAPI,
   type ToolRenderResultOptions,
@@ -87,6 +88,24 @@ function header(theme: ThemeLike, name: string, detail: string): string {
   return ` ${title}${rest}`;
 }
 
+function bashCallLines(
+  theme: ThemeLike,
+  command: string,
+  width: number,
+): string[] {
+  const title = theme.fg("toolTitle", "bash ");
+  const highlighted = highlightCode(command, "bash");
+
+  return highlighted.map((line: string, index: number) => {
+    const prefix = index === 0 ? ` ${title}` : "   ";
+    return `${prefix}${truncateToWidth(
+      line,
+      Math.max(0, width - prefix.length),
+      "…",
+    )}`;
+  });
+}
+
 function resultLines(result: unknown): string[] {
   const r = result as
     | {
@@ -115,21 +134,38 @@ function boxedResult(
   theme: ThemeLike,
   style: BoxStyle,
   context?: RenderContext,
+  toolName?: string,
 ): Boxed {
   const expanded = options.expanded === true;
+  const isBash = toolName === "bash";
+  const status = options.isPartial
+    ? { marker: "⋯", color: "warning" }
+    : context?.isError
+      ? { marker: "✗", color: "error" }
+      : isBash
+        ? { marker: "✓", color: "success" }
+        : undefined;
+  const displayStyle = status
+    ? {
+        ...style,
+        title: ` ${status.marker}${style.title}`,
+        titleColor: status.color,
+      }
+    : style;
+
   return new Boxed(() => {
     if (options.isPartial) {
-      return { lines: [theme.fg("warning", "running…")], style };
+      return { lines: [theme.fg("warning", "running…")], style: displayStyle };
     }
     const raw = resultLines(result);
     if (raw.length === 1 && raw[0].trim() === "") {
-      return { lines: [theme.fg("muted", "(no output)")], style };
+      return { lines: [theme.fg("muted", "(no output)")], style: displayStyle };
     }
     const colored = context?.isError
       ? raw.map((l) => theme.fg("error", l))
       : raw;
     if (expanded || colored.length <= PREVIEW_LINES) {
-      return { lines: colored, style };
+      return { lines: colored, style: displayStyle };
     }
     const hidden = colored.length - PREVIEW_LINES;
     return {
@@ -137,7 +173,7 @@ function boxedResult(
         ...colored.slice(0, PREVIEW_LINES),
         theme.fg("dim", `… +${hidden} more lines · ${expandHint()}`),
       ],
-      style,
+      style: displayStyle,
     };
   }, theme);
 }
@@ -172,17 +208,22 @@ export default function (pi: ExtensionAPI): void {
       parameters: real.parameters,
       renderShell: "self" as const,
       renderCall(args: ToolArgs, theme: ThemeLike) {
-        let cached = "";
+        let cached: string[] = [];
         return {
           render: (width: number) => {
-            cached = header(theme, name, headerDetail(args)).slice(
-              0,
-              Math.max(0, width),
-            );
-            return [cached];
+            cached =
+              name === "bash"
+                ? bashCallLines(theme, String(args.command ?? ""), width)
+                : [
+                    header(theme, name, headerDetail(args)).slice(
+                      0,
+                      Math.max(0, width),
+                    ),
+                  ];
+            return cached;
           },
           invalidate: () => {
-            cached = "";
+            cached = [];
           },
         };
       },
@@ -198,6 +239,7 @@ export default function (pi: ExtensionAPI): void {
           theme,
           { title: ` ${name} ` },
           context,
+          name,
         );
       },
       execute(

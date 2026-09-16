@@ -78,8 +78,31 @@ check(
   JSON.stringify(rcLines),
 );
 
-// renderResult states (use bash tool as representative)
+// bash renderCall: shell syntax highlighting + multiline preservation
 const bash = tools.find((t) => t.name === "bash");
+const bashCall = bash
+  .renderCall({ command: "git status --short && npm test -- --runInBand" }, theme)
+  .render(WIDTH);
+check(
+  "bash renderCall → command header with complete command",
+  bashCall.length === 1 &&
+    bashCall[0].includes("bash") &&
+    bashCall[0].includes("git status") &&
+    bashCall[0].includes("npm test"),
+  JSON.stringify(bashCall),
+);
+const multilineCall = bash
+  .renderCall({ command: "if true; then\n  echo ready\nfi" }, theme)
+  .render(WIDTH);
+check(
+  "bash renderCall → multiline shell command",
+  multilineCall.length === 3 &&
+    multilineCall[1].includes("echo ready") &&
+    multilineCall[2].includes("fi"),
+  JSON.stringify(multilineCall),
+);
+
+// renderResult states (use bash tool as representative)
 const body = Array.from({ length: 30 }, (_, i) => `output line ${i + 1}`).join(
   "\n",
 );
@@ -91,9 +114,9 @@ const collapsed = bash
   )
   .render(WIDTH);
 check(
-  "bash collapsed → framed with title",
+  "bash collapsed → framed with success marker",
   collapsed[0].startsWith("╭") &&
-    collapsed[0].includes("bash") &&
+    collapsed[0].includes("✓ bash") &&
     collapsed.at(-1).startsWith("╰"),
   JSON.stringify(collapsed[0]),
 );
@@ -118,8 +141,8 @@ const partial = bash
   .renderResult({ content: [] }, { expanded: false, isPartial: true }, theme)
   .render(WIDTH);
 check(
-  "bash isPartial → running… inside frame",
-  partial.some((l) => l.includes("running…")),
+  "bash isPartial → running marker and running… inside frame",
+  partial[0].includes("⋯ bash") && partial.some((l) => l.includes("running…")),
 );
 const errored = bash
   .renderResult(
@@ -130,8 +153,9 @@ const errored = bash
   )
   .render(WIDTH);
 check(
-  "bash isError → error-colored content",
-  errored.some((l) => l.startsWith("│") && l.includes("[err]command failed")),
+  "bash isError → failure marker and error-colored content",
+  errored[0].includes("✗ bash") &&
+    errored.some((l) => l.startsWith("│") && l.includes("[err]command failed")),
 );
 const empty = bash
   .renderResult(
