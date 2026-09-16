@@ -106,11 +106,12 @@ function bashCallLines(
   const lines = commandLines(command);
   const extra = lines.length - 1;
   const suffix =
-    extra > 0
-      ? theme.fg("dim", ` (+${extra} lines · ${expandHint()})`)
-      : "";
+    extra > 0 ? theme.fg("dim", ` (+${extra} lines · ${expandHint()})`) : "";
   const prefix = ` ${title}`;
-  const budget = Math.max(0, width - visibleWidth(prefix) - visibleWidth(suffix));
+  const budget = Math.max(
+    0,
+    width - visibleWidth(prefix) - visibleWidth(suffix),
+  );
   return [`${prefix}${truncateToWidth(lines[0] ?? "", budget, "…")}${suffix}`];
 }
 

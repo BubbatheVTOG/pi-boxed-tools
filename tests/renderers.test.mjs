@@ -89,7 +89,10 @@ check(
 // bash renderCall: shell syntax highlighting + multiline preservation
 const bash = tools.find((t) => t.name === "bash");
 const bashCall = bash
-  .renderCall({ command: "git status --short && npm test -- --runInBand" }, theme)
+  .renderCall(
+    { command: "git status --short && npm test -- --runInBand" },
+    theme,
+  )
   .render(WIDTH);
 check(
   "bash renderCall → command header with complete command",
@@ -195,10 +198,14 @@ check(
 );
 const multiRes = { content: [{ type: "text", text: "out1\nout2" }] };
 const multiCol = bash
-  .renderResult(multiRes, { expanded: false }, theme, { args: { command: multi } })
+  .renderResult(multiRes, { expanded: false }, theme, {
+    args: { command: multi },
+  })
   .render(100);
 const multiExp = bash
-  .renderResult(multiRes, { expanded: true }, theme, { args: { command: multi } })
+  .renderResult(multiRes, { expanded: true }, theme, {
+    args: { command: multi },
+  })
   .render(100);
 check(
   "bash collapsed result → command not shown",
@@ -214,7 +221,8 @@ check(
 );
 check(
   "bash single-line renderCall → unchanged, no count suffix",
-  bash.renderCall({ command: "ls -la" }, theme).render(80)[0] === " bash ls -la",
+  bash.renderCall({ command: "ls -la" }, theme).render(80)[0] ===
+    " bash ls -la",
 );
 
 // ── real execute delegation against a temp workspace ──
