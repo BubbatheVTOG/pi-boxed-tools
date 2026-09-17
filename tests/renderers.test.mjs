@@ -212,11 +212,9 @@ check(
   !multiCol.some((l) => l.includes("import x")),
 );
 check(
-  "bash expanded result → full command inside box above output",
-  multiExp.some((l) => l.includes("import x")) &&
-    multiExp.some((l) => l.includes("out2")) &&
-    multiExp.findIndex((l) => l.includes("import x")) <
-      multiExp.findIndex((l) => l.includes("out2")),
+  "bash expanded result → output expands without multiline command",
+  !multiExp.some((l) => l.includes("import x")) &&
+    multiExp.some((l) => l.includes("out2")),
   JSON.stringify(multiExp),
 );
 check(

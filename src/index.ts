@@ -173,15 +173,11 @@ function boxedResult(
     const colored = context?.isError
       ? raw.map((l) => theme.fg("error", l))
       : raw;
-    if (expanded) {
-      const command = String(context?.args?.command ?? "");
-      const commandBlock =
-        isBash && command.includes("\n")
-          ? [...commandLines(command), theme.fg("dim", "─".repeat(24))]
-          : [];
-      return { lines: [...commandBlock, ...colored], style: displayStyle };
-    }
-    if (colored.length <= PREVIEW_LINES) {
+    // Keep the command header compact even when Ctrl+O expands the result.
+    // Multiline commands such as heredocs belong in the model context, not in
+    // the visible result box; otherwise one global expansion makes the
+    // transcript grow by the entire command as well as its output.
+    if (expanded || colored.length <= PREVIEW_LINES) {
       return { lines: colored, style: displayStyle };
     }
     const hidden = colored.length - PREVIEW_LINES;
