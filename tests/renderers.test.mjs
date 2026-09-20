@@ -212,10 +212,37 @@ check(
   !multiCol.some((l) => l.includes("import x")),
 );
 check(
-  "bash expanded result → output expands without multiline command",
-  !multiExp.some((l) => l.includes("import x")) &&
-    multiExp.some((l) => l.includes("out2")),
+  "bash expanded result → full command inside box above output",
+  multiExp.some((l) => l.includes("import x")) &&
+    multiExp.some((l) => l.includes("out2")) &&
+    multiExp.findIndex((l) => l.includes("import x")) <
+      multiExp.findIndex((l) => l.includes("out2")),
   JSON.stringify(multiExp),
+);
+const emptyMultiRes = { content: [{ type: "text", text: "" }] };
+const emptyMultiCol = bash
+  .renderResult(emptyMultiRes, { expanded: false }, theme, {
+    args: { command: multi },
+  })
+  .render(100);
+const emptyMultiExp = bash
+  .renderResult(emptyMultiRes, { expanded: true }, theme, {
+    args: { command: multi },
+  })
+  .render(100);
+check(
+  "bash collapsed empty result → command remains hidden",
+  !emptyMultiCol.some((l) => l.includes("import x")) &&
+    emptyMultiCol.some((l) => l.includes("(no output)")),
+  JSON.stringify(emptyMultiCol),
+);
+check(
+  "bash expanded empty result → full command shown above no-output marker",
+  emptyMultiExp.some((l) => l.includes("import x")) &&
+    emptyMultiExp.some((l) => l.includes("(no output)")) &&
+    emptyMultiExp.findIndex((l) => l.includes("import x")) <
+      emptyMultiExp.findIndex((l) => l.includes("(no output)")),
+  JSON.stringify(emptyMultiExp),
 );
 check(
   "bash single-line renderCall → unchanged, no count suffix",

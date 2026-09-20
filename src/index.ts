@@ -167,17 +167,24 @@ function boxedResult(
       return { lines: [theme.fg("warning", "running…")], style: displayStyle };
     }
     const raw = resultLines(result);
-    if (raw.length === 1 && raw[0].trim() === "") {
-      return { lines: [theme.fg("muted", "(no output)")], style: displayStyle };
-    }
+    const isEmpty = raw.length === 1 && raw[0].trim() === "";
     const colored = context?.isError
       ? raw.map((l) => theme.fg("error", l))
       : raw;
-    // Keep the command header compact even when Ctrl+O expands the result.
-    // Multiline commands such as heredocs belong in the model context, not in
-    // the visible result box; otherwise one global expansion makes the
-    // transcript grow by the entire command as well as its output.
-    if (expanded || colored.length <= PREVIEW_LINES) {
+    if (expanded) {
+      const command = String(context?.args?.command ?? "");
+      const highlightedCommand = isBash ? commandLines(command) : [];
+      const commandBlock =
+        highlightedCommand.length > 1
+          ? [...highlightedCommand, theme.fg("dim", "─".repeat(24))]
+          : [];
+      const output = isEmpty ? [theme.fg("muted", "(no output)")] : colored;
+      return { lines: [...commandBlock, ...output], style: displayStyle };
+    }
+    if (isEmpty) {
+      return { lines: [theme.fg("muted", "(no output)")], style: displayStyle };
+    }
+    if (colored.length <= PREVIEW_LINES) {
       return { lines: colored, style: displayStyle };
     }
     const hidden = colored.length - PREVIEW_LINES;
