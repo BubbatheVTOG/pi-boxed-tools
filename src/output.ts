@@ -83,8 +83,7 @@ function isTextPart(part: ContentPart | null): part is ContentPart & { text: str
 export function resultLines(result: unknown): string[] {
   const typed = result as ToolResultLike | undefined;
   const text = parts(typed)
-    .filter(isTextPart)
-    .map((part) => part.text)
+    .flatMap((part) => (isTextPart(part) ? [part.text] : []))
     .join("\n");
   const lines = plainLines(text);
   const error = typed?.details?.error;
@@ -94,9 +93,11 @@ export function resultLines(result: unknown): string[] {
 
 /** One placeholder line per image part that pi will not draw itself. */
 export function imageNotes(result: unknown, isDrawnByPi: (part: ImagePart) => boolean): string[] {
-  return parts(result as ToolResultLike | undefined)
-    .filter((part) => part?.type === "image" && !isDrawnByPi(part))
-    .map((part) => plainLines(imageFallback(part.mimeType ?? "image/unknown")).join(" "));
+  return parts(result as ToolResultLike | undefined).flatMap((part) =>
+    part.type === "image" && !isDrawnByPi(part)
+      ? [plainLines(imageFallback(part.mimeType ?? "image/unknown")).join(" ")]
+      : [],
+  );
 }
 
 /**
