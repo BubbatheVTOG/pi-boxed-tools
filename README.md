@@ -26,29 +26,34 @@ its excellent `edit`/`write` diff rendering and native user-message box.
 - Rounded, width-safe tool-result frames with `╭─ title ─╮` / `╰────╯` edges
 - Theme-aware `border`, `accent`, and `userMessageBg` colors
 - Slim one-line call headers
-- Collapsed previews with configured expand hints
+- Collapsed previews with configured expand hints (newest lines for `bash`, first lines for file and listing tools)
 - Full output through pi's normal tool expansion behavior
-- Error, empty-result, and streaming states
-- Real execution delegated to pi's built-in tool implementations
+- Error, empty-result, and streaming states (live tail of running output)
+- Display-only: pi's own tools, settings (`shellCommandPrefix`, `shellPath`,
+  `images.autoResize`), prompt metadata, and execution are left untouched
 - No changes to pi core and no runtime dependencies beyond pi's peer packages
 
-The package uses pi's documented same-name built-in override API and
-`renderShell: "self"`. It copies the built-in tool schemas and prompt metadata,
-then delegates execution unchanged; only the display slots are replaced.
+The package registers renderers through pi's
+[`registerToolRenderer`](https://pi.dev/docs/latest/extensions#tool-rendering)
+API with `renderShell: "self"`; it never replaces a tool. pi consults renderer
+resolvers before a tool's own renderers, so the boxes apply even when another
+extension overrides one of these tools.
 
 ## Ownership split with pi-tool-display
 
 This package is deliberately **not a fork** of pi-tool-display. The packages
 work together:
 
-| Tool | Owner |
-| --- | --- |
-| `read`, `grep`, `find`, `ls`, `bash` | `pi-boxed-tools` |
-| `edit`, `write` | `pi-tool-display` |
-| User message box and thinking labels | `pi-tool-display` |
+| Tool                                                | Owner                                |
+| --------------------------------------------------- | ------------------------------------ |
+| `read`, `grep`, `find`, `ls`, `bash`                | `pi-boxed-tools`                     |
+| `edit`, `write`                                     | `pi-tool-display`                    |
+| User message box and thinking labels                | `pi-tool-display`                    |
 | `web_search`, `fetch_content`, `get_search_content` | Companion local web-search extension |
 
-Disable pi-tool-display's ownership for the five tools claimed here:
+The boxes take precedence over pi-tool-display's renderers either way. Still
+disable pi-tool-display's tool overrides for these five tools, so the tools
+themselves stay pi's built-ins (which honor your shell and image settings):
 
 ```json
 {
@@ -104,22 +109,25 @@ After installation, apply the ownership configuration above and run `/reload`.
 ## Development
 
 The package has no npm runtime dependencies. Pi supplies its core peer packages
-when loading the extension.
-
-Run the deterministic harnesses from pi's installed package root so the same
-core-package aliases used by pi's loader are available:
+when loading the extension. Formatting and linting use
+[oxfmt](https://oxc.rs/docs/guide/usage/formatter) and
+[oxlint](https://oxc.rs/docs/guide/usage/linter) as dev dependencies.
 
 ```bash
-cd /home/bubba/.npm-global/lib/node_modules/@earendil-works/pi-coding-agent
-node ~/git/pi-boxed-tools/tests/renderers.test.mjs
+npm install
+npm run check   # oxfmt --check, oxlint --deny-warnings, test harness
 ```
 
-The harness verifies:
+The harness loads the extension through the globally installed pi package
+(override with `PI_PACKAGE_DIR`) and verifies:
 
-- all five tools register with valid schemas and prompt metadata
-- collapsed, expanded, partial, error, and empty rendering states
-- frame integrity and width-safe output
-- real `read`, `bash`, `grep`, `find`, and `ls` execution delegation
+- one renderer resolver is registered, no tool is overridden, and tools other
+  than the five defer to the next renderer
+- collapsed, expanded, streaming, error, empty, and image-placeholder states
+- frame integrity, rows never wider than the given width (down to 1 column),
+  width-safe headers, and sanitized output (tabs, CR, control bytes, escapes)
+
+See [`AGENTS.md`](AGENTS.md) for module layout, invariants, and lint limits.
 
 ## Recreating the illustrative mockup
 
@@ -138,12 +146,15 @@ a live terminal recording.
 
 ## Rollback
 
-Remove the package, restore pi-tool-display's five ownership flags to `true`,
-and run `/reload`:
+Remove the package, optionally restore pi-tool-display's five ownership flags
+to `true`, and run `/reload`:
 
 ```bash
-pi remove ~/git/pi-boxed-tools
+pi remove git:github.com/BubbatheVTOG/pi-boxed-tools
 ```
+
+For a local development install (`pi install ~/git/pi-boxed-tools`), remove it
+with `pi remove ~/git/pi-boxed-tools` instead.
 
 ## License
 

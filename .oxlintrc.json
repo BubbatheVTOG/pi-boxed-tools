@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "rules": {
+    "complexity": [
+      "error",
+      {
+        "max": 10
+      }
+    ],
+    "max-depth": [
+      "error",
+      {
+        "max": 2
+      }
+    ],
+    "max-params": [
+      "error",
+      {
+        "max": 2
+      }
+    ],
+    "max-nested-callbacks": [
+      "error",
+      {
+        "max": 3
+      }
+    ],
+    "no-nested-ternary": "error",
+    "no-negated-condition": "error",
+    "no-lonely-if": "error",
+    "no-else-return": "error",
+    "typescript/no-explicit-any": "error"
+  },
+  "ignorePatterns": ["node_modules/**", "docs/**"],
+  "overrides": [
+    {
+      "files": ["src/output.ts", "tests/**"],
+      "rules": {
+        "no-control-regex": "off"
+      }
+    }
+  ]
+}

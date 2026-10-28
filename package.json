@@ -2,9 +2,19 @@
   "name": "pi-boxed-tools",
   "version": "0.1.0",
   "description": "User-box-inspired boxed rendering for pi's built-in text tools.",
-  "keywords": ["pi-package", "pi-coding-agent", "terminal-ui"],
+  "keywords": [
+    "pi-coding-agent",
+    "pi-package",
+    "terminal-ui"
+  ],
+  "bugs": {
+    "url": "https://github.com/BubbatheVTOG/pi-boxed-tools/issues"
+  },
   "license": "MIT",
-  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/BubbatheVTOG/pi-boxed-tools.git"
+  },
   "files": [
     "src",
     "tests",
@@ -13,19 +23,26 @@
     "LICENSE",
     "package.json"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@github.com/BubbatheVTOG/pi-boxed-tools.git"
+  "type": "module",
+  "scripts": {
+    "lint": "oxlint --deny-warnings src tests",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "test": "node tests/renderers.test.mjs",
+    "check": "npm run fmt:check && npm run lint && npm test"
   },
-  "bugs": {
-    "url": "https://github.com/BubbatheVTOG/pi-boxed-tools/issues"
-  },
-  "pi": {
-    "extensions": ["./src/index.ts"]
+  "devDependencies": {
+    "oxfmt": "0.75.0",
+    "oxlint": "1.90.0"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
     "typebox": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
   }
 }
