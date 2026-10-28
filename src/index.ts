@@ -14,7 +14,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { getCapabilities, type Component } from "@earendil-works/pi-tui";
 import { Boxed, type BoxTheme } from "./box.ts";
-import { imageNotes, plainLines, styledLines, type ImagePart } from "./output.ts";
+import { imageNotes, plainLines, styledLines, trimBlankEdges, type ImagePart } from "./output.ts";
 import { callHeader, commandHeader, resultContent, type RowLabel } from "./tool-row.ts";
 
 type ToolArgs = Record<string, unknown>;
@@ -77,17 +77,13 @@ const SPECS: ToolSpec[] = [
   },
 ];
 
-// Blank edge lines (a trailing newline, a leading blank line) are not part of
-// what the command does and would inflate the header's hidden-line count.
-function trimBlankEdgeLines(source: string): string {
-  return source.replace(/^\s*\n/, "").trimEnd();
-}
-
 // highlightCode returns one string per source line; each is sanitized so a
-// stray CR or control byte cannot corrupt the row it lands in.
+// stray CR or control byte cannot corrupt the row it lands in. Blank edge lines
+// (a trailing newline, a leading blank line) are not part of what the command
+// does and would inflate the header's hidden-line count.
 function highlightedCommand(spec: CommandSpec, args: ToolArgs): string[] {
-  const source = trimBlankEdgeLines(spec.command(args).replace(/\r\n?/g, "\n"));
-  return highlightCode(source, "bash").flatMap(styledLines);
+  const source = spec.command(args).replace(/\r\n?/g, "\n");
+  return trimBlankEdges(highlightCode(source, "bash").flatMap(styledLines));
 }
 
 /** Argument detail flattened to one row-safe line. */
